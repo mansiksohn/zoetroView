@@ -76,7 +76,7 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
       <div className="p-4">
         <button
           onClick={onBackClick}
-          className="w-full p-2 bg-gray-800 text-white rounded mt-4"
+          className="w-full p-2 text-white rounded mt-4"
           style={{ zIndex: 10 }}
         >
           Enter Another URL
