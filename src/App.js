@@ -37,7 +37,10 @@ const Home = () => {
   };
 
   return (
-    <div className="p-0 flex items-center justify-center h-screen bg-black">
+    <div className="p-0 flex flex-col items-center justify-center h-screen bg-black text-white">
+      <img src={`${process.env.PUBLIC_URL}/logo192.png`} alt="ZoetroView Logo" className="w-24 h-24 mb-4" />
+      <h1 className="text-5xl font-bold mb-4">ZoetroView</h1>
+      <p className="text-sm max-w-md mb-8 text-center border-0">A desktop viewer that allows users to explore YouTube videos seamlessly through vertical scrolling with a mouse.</p>
       <div className="mb-4 w-full max-w-md">
         <input
           type="text"
