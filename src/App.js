@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import YouTubeWithScript from './YouTubeWithScript';
 import './App.css';
+import { Analytics } from '@vercel/analytics/react';
 
 // 유튜브 URL에서 videoId를 추출하는 함수
 const extractVideoId = (url) => {
@@ -62,6 +63,7 @@ const App = () => {
       ) : (
         <YouTubeWithScript videoId={videoId} onBackClick={handleBackButtonClick} />
       )}
+      <Analytics />
     </div>
   );
 };
