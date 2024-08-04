@@ -1,38 +1,48 @@
-.App {
-  text-align: center;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
+body {
+    background-color: #000000;
+    color: #ffffff;
   }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+  
+  input, button {
+    background-color: #1f1f1f;
+    color: #ffffff;
+    border: 1px solid #333333;
   }
-  to {
-    transform: rotate(360deg);
+  
+  input:focus, button:focus {
+    outline: none;
+    border-color: #555555;
   }
-}
+  
+  button:hover {
+    background-color: #333333;
+  }
+  
+  p {
+    border: 1px solid #333333;
+  }
+
+  /* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 12px; /* 스크롤바 너비 */
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: #1f1f1f; /* 스크롤바 트랙 배경색 */
+    border-radius: 10px; /* 둥근 모서리 */
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background-color: #888; /* 스크롤바 색상 */
+    border-radius: 10px; /* 둥근 모서리 */
+    border: 3px solid #1f1f1f; /* 바깥쪽 경계 */
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: #555; /* 스크롤바 호버 시 색상 */
+  }
+  
