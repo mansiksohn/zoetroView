@@ -22,7 +22,7 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
         setPlayer(ytPlayer);
 
         const videoDuration = ytPlayer.getDuration();
-        const interval = 5; // 5초 간격으로 스크립트 생성
+        const interval = 1; // 스크립트 항목을 1초 간격으로 생성
         const newScript = [];
 
         for (let time = 0; time < videoDuration; time += interval) {
@@ -45,7 +45,7 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
             const scrollFraction = scrollTop / scrollHeight;
             const videoDuration = player.getDuration();
             const newTime = scrollFraction * videoDuration;
-            player.seekTo(newTime, true); // 영상의 재생 위치를 즉시 조정
+            player.seekTo(newTime, true); // 즉시 영상 재생 위치 조정
         }
     };
 
@@ -75,11 +75,11 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
     return (
         <div className="flex flex-col h-screen w-full">
             <div className="w-full top-0">
-                <YouTube videoId={videoId} opts={{ width: '100%', height: '480vh' }} onReady={onReady} />
+                <YouTube videoId={videoId} opts={{ width: '100%', height: '560vh' }} onReady={onReady} />
             </div>
             <div 
                 ref={scriptRef} 
-                className={`w-full overflow-y-auto p-4 h-full mt-4 max-w-full bg-gray-950 ${isPointerInScript ? 'border-4 border-yellow-500' : 'border-none'}`} 
+                className={`w-full overflow-y-auto p-4 h-full mt-4 max-w-full bg-gray-950 ${isPointerInScript ? 'border-4 rounded-lg border-purple' : 'border-4 border-purple-ghost rounded-lg'}`} 
                 onScroll={handleScriptScroll}
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
@@ -91,7 +91,7 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
                         <p 
                             key={index} 
                             data-time={line.time}
-                            className={`text-2xl text-center p-2 m-0 rounded ${isActive ? 'bg-purple' : 'bg-black'}`}
+                            className={`text-2xl text-center p-2 m-0 rounded ${isActive ? 'bg-purple-ghost' : 'bg-black'}`}
                             style={{ border: '0px solid #222222' }}
                         >
                             {line.text}
