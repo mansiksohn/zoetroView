@@ -1,13 +1,12 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Route, Routes, useNavigate, useParams } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { BrowserRouter as Router, Route, Routes, useNavigate, useParams, Link } from 'react-router-dom';
 import YouTubeWithScript from './YouTubeWithScript';
 import './App.css';
 import { Analytics } from '@vercel/analytics/react';
-import { Link } from 'react-router-dom';
 
 // 유튜브 URL에서 videoId를 추출하는 함수
 const extractVideoId = (url) => {
-  const regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+  const regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
   const match = url.match(regex);
   return match ? match[1] : null;
 };
@@ -16,6 +15,14 @@ const Home = () => {
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const inputRef = useRef(null);
+
+  // 컴포넌트 마운트 시 input 요소에 포커스
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
 
   const handleInputChange = (e) => {
     setUrl(e.target.value);
@@ -41,10 +48,11 @@ const Home = () => {
     <div className="p-0 flex flex-col items-center justify-center h-screen bg-black text-white">
       <img src={`${process.env.PUBLIC_URL}/logo192.png`} alt="ZoetroView Logo" className="w-24 h-24 mb-4" />
       <h1 className="text-5xl font-bold mb-4">ZoetroView</h1>
-      
+
       <p className="text-sm max-w-md mb-8 text-center border-0">A desktop viewer that allows users to explore YouTube videos seamlessly through vertical scrolling with a mouse.</p>
       <div className="w-full max-w-md">
         <input
+          ref={inputRef}
           type="text"
           value={url}
           onChange={handleInputChange}
@@ -74,7 +82,6 @@ const Home = () => {
 
 const VideoPage = () => {
   const { videoId } = useParams();
-
   return <YouTubeWithScript videoId={videoId} onBackClick={() => window.history.back()} />;
 };
 
