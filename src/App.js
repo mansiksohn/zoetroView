@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Route, Routes, useNavigate, useParams } from '
 import YouTubeWithScript from './YouTubeWithScript';
 import './App.css';
 import { Analytics } from '@vercel/analytics/react';
+import { Link } from 'react-router-dom';
 
 // 유튜브 URL에서 videoId를 추출하는 함수
 const extractVideoId = (url) => {
@@ -40,22 +41,31 @@ const Home = () => {
     <div className="p-0 flex flex-col items-center justify-center h-screen bg-black text-white">
       <img src={`${process.env.PUBLIC_URL}/logo192.png`} alt="ZoetroView Logo" className="w-24 h-24 mb-4" />
       <h1 className="text-5xl font-bold mb-4">ZoetroView</h1>
+      
       <p className="text-sm max-w-md mb-8 text-center border-0">A desktop viewer that allows users to explore YouTube videos seamlessly through vertical scrolling with a mouse.</p>
-      <div className="mb-4 w-full max-w-md">
+      <div className="w-full max-w-md">
         <input
           type="text"
           value={url}
           onChange={handleInputChange}
           onKeyPress={handleKeyPress}
           placeholder="Enter YouTube URL"
-          className="p-2 border border-gray-700 rounded w-full bg-gray-900 text-white"
+          className="p-2 mb-1 border border-gray-700 rounded w-full bg-gray-900 text-white"
         />
-        <button
-          onClick={handleButtonClick}
-          className="mt-2 p-2 bg-purple text-white rounded w-full"
+      </div>
+      <div className="mb-4 w-full max-w-md">
+        <Link
+          to={extractVideoId(url) ? `/${extractVideoId(url)}` : '#'}
+          onClick={(e) => {
+            if (!extractVideoId(url)) {
+              e.preventDefault();
+              setError('Invalid YouTube URL. Please enter a valid URL.');
+            }
+          }}
+          className={`button ${extractVideoId(url) ? '' : 'disabled'}`}
         >
           Load Video
-        </button>
+        </Link>
         {error && <p className="mt-2 text-red-500 border-0">{error}</p>}
       </div>
     </div>
