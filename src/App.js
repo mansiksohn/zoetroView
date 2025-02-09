@@ -16,28 +16,24 @@ const Home = () => {
   const SAMPLE_URL = 'https://youtu.be/JVxe5NIABsI';
   const [url, setUrl] = useState(SAMPLE_URL);
   const [error, setError] = useState('');
+  const [showTooltip, setShowTooltip] = useState(true);
   const navigate = useNavigate();
   const inputRef = useRef(null);
-
-  // 툴팁 표시 상태
-  const [showTooltip, setShowTooltip] = useState(true);
 
   // 페이지 로드 시 input 요소에 포커스 + 전체 선택
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.focus();
-      // 전체 선택을 통해 사용자가 바로 입력을 덮어쓰거나 복사할 수 있도록 함
       inputRef.current.select();
     }
   }, []);
 
-  // url이 바뀌면 샘플URL이 아닌 경우 툴팁 닫기
+  // URL 변경 시 툴팁을 닫는 로직 개선
   useEffect(() => {
-    if (url !== SAMPLE_URL) {
-      setShowTooltip(false);
-    } else {
-      // 다시 샘플 URL로 돌아오면 툴팁 다시 보이도록
+    if (url === SAMPLE_URL || url === "") {
       setShowTooltip(true);
+    } else {
+      setShowTooltip(false);
     }
   }, [url, SAMPLE_URL]);
 
