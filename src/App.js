@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, useNavigate, useParams, Link } from 'react-router-dom';
 import YouTubeWithScript from './YouTubeWithScript';
 import './App.css';
@@ -77,12 +77,12 @@ const Home = () => {
             type="text"
             value={url}
             onChange={handleInputChange}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyPress}
             placeholder="Enter YouTube URL"
             className="p-2 mb-1 border border-gray-700 rounded w-full bg-gray-900 text-white"
           />
           {showTooltip && (
-            <div className="absolute left-1 bottom-9 left-0 mb-1">
+            <div className="absolute left-1 bottom-9 mb-1">
               <div className="speech-bubble text-white p-1 text-xs z-10">
                 Paste your YouTube URL or type here!
               </div>
@@ -111,6 +111,29 @@ const Home = () => {
 
 const VideoPage = () => {
   const { videoId } = useParams();
+
+  useLayoutEffect(() => {
+    if (videoId) {
+      // fetch 전에 임시 타이틀 설정
+      document.title = 'ZoetroView | Loading...';
+
+      const fetchVideoTitle = async () => {
+        try {
+          const response = await fetch(
+            `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+          );
+          const data = await response.json();
+          document.title = `ZoetroView | ${data.title}`;
+        } catch (error) {
+          console.error('Error fetching video title:', error);
+          document.title = `ZoetroView | Unknown Video`;
+        }
+      };
+
+      fetchVideoTitle();
+    }
+  }, [videoId]);
+
   return <YouTubeWithScript videoId={videoId} onBackClick={() => window.history.back()} />;
 };
 
