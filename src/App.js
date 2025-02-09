@@ -20,7 +20,10 @@ const Home = () => {
   const navigate = useNavigate();
   const inputRef = useRef(null);
 
-  // 페이지 로드 시 input 요소에 포커스 + 전체 선택
+  // 개선사항 1: extractVideoId를 여러 번 호출하지 않고, 한 번 계산하여 재사용
+  const videoId = extractVideoId(url);
+
+  // 페이지 로드 시 input 요소에 포커스 및 전체 선택
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.focus();
@@ -28,23 +31,22 @@ const Home = () => {
     }
   }, []);
 
-  // URL 변경 시 툴팁을 닫는 로직 개선
+  // 개선사항 4: SAMPLE_URL은 상수이므로 의존성 배열에서 제거 (url만 감지)
   useEffect(() => {
     if (url === SAMPLE_URL || url === "") {
       setShowTooltip(true);
     } else {
       setShowTooltip(false);
     }
-  }, [url, SAMPLE_URL]);
+  }, [url]);
 
   const handleInputChange = (e) => {
     setUrl(e.target.value);
   };
 
   const handleButtonClick = () => {
-    const id = extractVideoId(url);
-    if (id) {
-      navigate(`/${id}`);
+    if (videoId) {
+      navigate(`/${videoId}`);
       setError('');
     } else {
       setError('Invalid YouTube URL. Please enter a valid URL.');
@@ -92,14 +94,14 @@ const Home = () => {
       </div>
       <div className="mb-4 w-full max-w-md">
         <Link
-          to={extractVideoId(url) ? `/${extractVideoId(url)}` : '#'}
+          to={videoId ? `/${videoId}` : '#'}
           onClick={(e) => {
-            if (!extractVideoId(url)) {
+            if (!videoId) {
               e.preventDefault();
               setError('Invalid YouTube URL. Please enter a valid URL.');
             }
           }}
-          className={`button ${extractVideoId(url) ? '' : 'disabled'}`}
+          className={`button ${videoId ? '' : 'disabled'}`}
         >
           Load Video
         </Link>
@@ -112,25 +114,36 @@ const Home = () => {
 const VideoPage = () => {
   const { videoId } = useParams();
 
+  // 개선사항 2 & 3: useLayoutEffect를 사용하여 타이틀 업데이트를 빠르게 적용하고, AbortController를 통해 fetch 취소 처리
   useLayoutEffect(() => {
     if (videoId) {
-      // fetch 전에 임시 타이틀 설정
+      // fetch 전 임시 타이틀 설정
       document.title = 'ZoetroView | Loading...';
+      const controller = new AbortController();
 
       const fetchVideoTitle = async () => {
         try {
           const response = await fetch(
-            `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+            `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`,
+            { signal: controller.signal }
           );
           const data = await response.json();
           document.title = `ZoetroView | ${data.title}`;
         } catch (error) {
-          console.error('Error fetching video title:', error);
-          document.title = `ZoetroView | Unknown Video`;
+          if (error.name === 'AbortError') {
+            console.log('Fetch aborted');
+          } else {
+            console.error('Error fetching video title:', error);
+            document.title = `ZoetroView | Unknown Video`;
+          }
         }
       };
 
       fetchVideoTitle();
+
+      return () => {
+        controller.abort();
+      };
     }
   }, [videoId]);
 
