@@ -74,9 +74,8 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
     setIsPointerInScript(false);
   };
 
-  // 터치가 끝난 시점에 스크롤 위치를 반영하여 재생시간 업데이트하는 함수
-  const handleTouchEnd = () => {
-    // 터치 인터랙션 종료 후 최종 위치 업데이트
+  // 터치 이동 중에도 스크롤 위치를 반영하여 재생시간 업데이트하는 함수
+  const handleTouchMove = () => {
     if (scriptRef.current && player) {
       const scrollTop = scriptRef.current.scrollTop;
       const scrollHeight = scriptRef.current.scrollHeight - scriptRef.current.clientHeight;
@@ -85,6 +84,10 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
       const newTime = scrollFraction * videoDuration;
       player.seekTo(newTime, true);
     }
+  };
+
+  // 터치가 끝난 시점에 스크롤 위치를 반영하여 재생시간 업데이트하는 함수
+  const handleTouchEnd = () => {
     setIsTouchScrolling(false);
   };
 
@@ -131,6 +134,7 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
       >
