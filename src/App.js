@@ -59,6 +59,9 @@ const Home = () => {
     }
   };
 
+  // 기본 URL일 경우 테스트 문구, 그 외에는 일반 안내 문구
+  const tooltipText = url === SAMPLE_URL ? "Try the sample video!" : "Paste your YouTube URL or type here!";
+
   return (
     <div className="p-0 flex flex-col items-center justify-center h-screen bg-black text-white relative">
       <img
@@ -86,7 +89,7 @@ const Home = () => {
           {showTooltip && (
             <div className="absolute left-1 bottom-9 mb-1">
               <div className="speech-bubble text-white p-1 text-xs z-10">
-                Paste your YouTube URL or type here!
+                {tooltipText}
               </div>
             </div>
           )}
