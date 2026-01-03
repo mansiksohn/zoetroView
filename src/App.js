@@ -1,11 +1,13 @@
+/* global chrome */
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes, useNavigate, useParams, Link } from 'react-router-dom';
+import { HashRouter as Router, Route, Routes, useNavigate, useParams, Link } from 'react-router-dom';
 import YouTubeWithScript from './YouTubeWithScript';
 import './App.css';
 import { Analytics } from '@vercel/analytics/react';
 
 // 유튜브 URL에서 videoId를 추출하는 함수
 const extractVideoId = (url) => {
+  if (!url) return null;
   const regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
   const match = url.match(regex);
   return match ? match[1] : null;
@@ -19,6 +21,21 @@ const Home = () => {
   const [showTooltip, setShowTooltip] = useState(true);
   const navigate = useNavigate();
   const inputRef = useRef(null);
+
+  // Chrome Active Tab Detection
+  useEffect(() => {
+    // Check if running as extension
+    if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.query) {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs && tabs[0] && tabs[0].url) {
+          const currentTabId = extractVideoId(tabs[0].url);
+          if (currentTabId) {
+            navigate(`/${currentTabId}`);
+          }
+        }
+      });
+    }
+  }, [navigate]);
 
   // 개선사항 1: extractVideoId를 여러 번 호출하지 않고, 한 번 계산하여 재사용
   const videoId = extractVideoId(url);
