@@ -96,7 +96,7 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
       {/* Timeline */}
       <div
         ref={scriptRef}
-        className={`w-full overflow-y-auto p-4 grow basis-0 min-h-0 mt-4 max-w-full bg-gray-950 ${isPointerInScript ? 'border-4 rounded-lg border-purple' : 'border-4 border-purple-ghost rounded-lg'}`}
+        className={`overflow-y-auto p-4 grow basis-0 min-h-0 mt-4 mx-4 max-w-full bg-gray-950 ${isPointerInScript ? 'border-4 rounded-lg border-purple' : 'border-4 border-purple-ghost rounded-lg'}`}
         {...handlers}
       >
         {script.map((line, index) => {
@@ -119,17 +119,17 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
       <div className="p-4 shrink-0">
         {isExtension ? (
           <a
-            href={`https://zoetroview.vercel.app/${videoId}`}
+            href={`https://zoetroview.vercel.app/#/${videoId}`}
             target="_blank"
             rel="noreferrer"
-            className="block w-full text-center p-2 text-white rounded mt-4 bg-purple-ghost hover:bg-purple"
+            className="block w-full text-center p-2 text-white rounded bg-purple-ghost hover:bg-purple"
           >
-            Open ZoetroView Website
+            Open ZoetroView Web
           </a>
         ) : (
           <button
             onClick={onBackClick}
-            className="w-full p-2 text-white rounded mt-4"
+            className="w-full p-2 text-white rounded"
             style={{ zIndex: 10 }}
           >
             Enter Another URL
