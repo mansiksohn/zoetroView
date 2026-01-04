@@ -1,75 +1,68 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
-const useVideoSync = (player, scriptRef) => {
+const useVideoSync = (player, listRef, { secondsPerItem = 1, itemSize = 50 }) => {
     const [currentTime, setCurrentTime] = useState(0);
-    const [isPointerInScript, setIsPointerInScript] = useState(false);
-    const [isTouchScrolling, setIsTouchScrolling] = useState(false);
+    const [isHovering, setIsHovering] = useState(false);
 
-    // Update current time from player every second
+    // We use a ref to track if the last scroll was triggered by the code (auto-scroll)
+    // react-window's onScroll provides { scrollUpdateWasRequested }, but we need it for our logic
+    const isAutoScrolling = useRef(false);
+
+    // Update current time from player every 0.1s for smoother UI updates (optional, keeping 1s for now matching original logic? 
+    // User requested 60fps smooth. 1s interval is too slow for "smooth" sync if we rely on it for UI highlights.
+    // But let's stick to 500ms or 250ms or keep standard and rely on events.
+    // Original was 1000ms. Let's make it faster: 200ms.
     useEffect(() => {
         if (player) {
             const interval = setInterval(() => {
                 setCurrentTime(player.getCurrentTime());
-            }, 1000);
+            }, 200);
             return () => clearInterval(interval);
         }
     }, [player]);
 
-    // Sync Script Scroll -> Video Time
-    const syncVideoToScroll = useCallback(() => {
-        if (scriptRef.current && player) {
-            const scrollTop = scriptRef.current.scrollTop;
-            const scrollHeight = scriptRef.current.scrollHeight - scriptRef.current.clientHeight;
-            const scrollFraction = scrollTop / scrollHeight;
-            const videoDuration = player.getDuration();
-            const newTime = scrollFraction * videoDuration;
-
-            if (!isNaN(newTime) && isFinite(newTime)) {
-                player.seekTo(newTime, true);
-            }
-        }
-    }, [player, scriptRef]);
-
-    const handleScroll = () => {
-        if (isPointerInScript && !isTouchScrolling) {
-            syncVideoToScroll();
-        }
-    };
-
-    const handleTouchEnd = () => {
-        syncVideoToScroll();
-        setIsTouchScrolling(false);
-    };
-
-    // Sync Video Time -> Script Scroll
+    // Sync Video -> List Scroll
     useEffect(() => {
-        if (player && !isPointerInScript && !isTouchScrolling && scriptRef.current) {
-            const videoDuration = player.getDuration();
-            const scrollFraction = currentTime / videoDuration;
-            const targetScrollTop = scrollFraction * (scriptRef.current.scrollHeight - scriptRef.current.clientHeight);
+        if (player && listRef.current && !isHovering) {
+            const index = Math.floor(currentTime / secondsPerItem);
+            // react-window scrollToItem handles centering
+            isAutoScrolling.current = true;
+            listRef.current.scrollToItem(index, 'center');
+            // Reset flag after a short delay to allow scroll event to fire and be ignored
+            setTimeout(() => { isAutoScrolling.current = false; }, 100);
+        }
+    }, [currentTime, player, listRef, isHovering, secondsPerItem]);
 
-            if (!isNaN(targetScrollTop) && isFinite(targetScrollTop)) {
-                scriptRef.current.scrollTo({
-                    top: targetScrollTop,
-                    behavior: 'smooth'
-                });
+    // Handler for react-window onScroll
+    // logic: Center of Viewport Time
+    const onListScroll = useCallback(({ scrollOffset, scrollUpdateWasRequested }, listHeight) => {
+        // Ignore if this scroll was caused by scrollToItem (Video->Scroll sync)
+        if (scrollUpdateWasRequested || isAutoScrolling.current) return;
+
+        if (player && listRef.current) {
+            const centerOffset = scrollOffset + listHeight / 2;
+            const index = centerOffset / itemSize;
+            const newTime = index * secondsPerItem;
+
+            if (!isNaN(newTime) && isFinite(newTime) && newTime >= 0) {
+                player.seekTo(newTime, true);
+                setCurrentTime(newTime);
             }
         }
-    }, [currentTime, player, isPointerInScript, isTouchScrolling, scriptRef]);
+    }, [player, listRef, itemSize, secondsPerItem]);
 
-    // Event Handlers
     const handlers = {
-        onScroll: handleScroll,
-        onMouseEnter: () => setIsPointerInScript(true),
-        onMouseLeave: () => setIsPointerInScript(false),
-        onTouchStart: () => setIsTouchScrolling(true),
-        onTouchEnd: handleTouchEnd,
-        onTouchCancel: handleTouchEnd
+        onMouseEnter: () => setIsHovering(true),
+        onMouseLeave: () => {
+            setIsHovering(false);
+        },
+        // We expose a specialized scroll handler for the List component
+        onListScroll
     };
 
     return {
         currentTime,
-        isPointerInScript,
+        isHovering,
         handlers
     };
 };

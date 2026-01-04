@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ZoetroView",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "YouTube Script Viewer Side Panel",
   "side_panel": {
     "default_path": "index.html"

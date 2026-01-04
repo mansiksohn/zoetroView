@@ -1,37 +1,122 @@
 /* global chrome */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import YouTube from 'react-youtube';
+import { FixedSizeList as List } from 'react-window';
 import useIsMobile from './useIsMobile';
 import useVideoSync from './hooks/useVideoSync';
 import RemotePlayer from './utils/RemotePlayer';
+import { useContainerDimensions } from './hooks/useContainerDimensions';
+
+// Row Component for Detailed Timeline (1s)
+const DetailedRow = ({ index, style, data }) => {
+  const { script, currentTime, player } = data;
+  const line = script[index];
+  if (!line) return null;
+
+  // Determine active state (approximate window around current time)
+  // Since 1 item = 1 second, we can directly compare index vs floor(currentTime)
+  // But let's use a small range for smoother highlight
+  const isCurrentSecond = Math.floor(currentTime) === line.time;
+
+  // Show text every 10 seconds (0, 10, 20...)
+  const isMajor = index % 10 === 0;
+
+  return (
+    <div style={style} className="flex items-center justify-center">
+      {isMajor ? (
+        <div
+          className={`w-full text-center transition-colors duration-200 cursor-pointer ${isCurrentSecond ? 'text-purple-400 font-bold text-2xl' : 'text-gray-400 text-xl hover:text-white'}`}
+          onClick={() => player && player.seekTo(line.time, true)}
+        >
+          {line.text}
+        </div>
+      ) : (
+        <div
+          className="w-full h-full flex items-center justify-center cursor-pointer group"
+          onClick={() => player && player.seekTo(line.time, true)}
+          title={line.text} // Tooltip for minor ticks
+        >
+          {/* Large ticks for better visibility with large fonts */}
+          <div className={`w-2 h-2 rounded-full ${isCurrentSecond ? 'bg-purple-500 scale-150' : 'bg-gray-600 group-hover:bg-gray-400'}`} />
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Row Component for Fast Timeline (10s)
+const FastRow = ({ index, style, data }) => {
+  const { script, currentTime, player } = data;
+  const line = script[index];
+  if (!line) return null;
+
+  // 1 item = 10 seconds.
+  // Current Time is in seconds.
+  // Active if currentTime is within this 10s block
+  const isActiveBlock = currentTime >= line.time && currentTime < (line.time + 10);
+
+  // Show text every 60 seconds (index 0, 6, 12...)
+  const isMajor = index % 6 === 0;
+
+  return (
+    <div style={style} className="flex items-center justify-center">
+      {isMajor ? (
+        <div
+          className={`w-full text-center transition-colors duration-200 cursor-pointer ${isActiveBlock ? 'text-blue-400 font-bold text-xl' : 'text-gray-500 text-lg hover:text-white'}`}
+          onClick={() => player && player.seekTo(line.time, true)}
+        >
+          {line.text}
+        </div>
+      ) : (
+        <div
+          className="w-full h-full flex items-center justify-center cursor-pointer group"
+          onClick={() => player && player.seekTo(line.time, true)}
+          title={line.text}
+        >
+          <div className={`w-4 h-2 rounded ${isActiveBlock ? 'bg-blue-600' : 'bg-gray-700 group-hover:bg-gray-500'}`} />
+        </div>
+      )}
+    </div>
+  );
+};
 
 const YouTubeWithScript = ({ videoId, onBackClick }) => {
   const [player, setPlayer] = useState(null);
   const [script, setScript] = useState([]);
-  const [fastScript, setFastScript] = useState([]); // New State
-  const scriptRef = useRef(null);
-  const fastScriptRef = useRef(null); // New Ref
+  const [fastScript, setFastScript] = useState([]);
 
-  // Check if we are running as a Chrome Extension
+  // Refs for FixedSizeList
+  const scriptListRef = useRef(null);
+  const fastListRef = useRef(null);
+
+  // Refs for Dimension Measuring
+  const [detailedContainerRef, detailedDim] = useContainerDimensions();
+  const [fastContainerRef, fastDim] = useContainerDimensions();
+
   const isExtension = typeof chrome !== 'undefined' && !!chrome.runtime && !!chrome.tabs;
-
-  const {
-    currentTime,
-    isPointerInScript,
-    handlers
-  } = useVideoSync(player, scriptRef);
-
-  // Second sync for Fast Timeline
-  const {
-    currentTime: fastCurrentTime,
-    isPointerInScript: isPointerInFastScript,
-    handlers: fastHandlers
-  } = useVideoSync(player, fastScriptRef);
-
   const isMobile = useIsMobile();
 
-  // Re-applied fix: useMemo + origin
-  const videoOpts = React.useMemo(() => ({
+  // Constants
+  const ITEM_SIZE = 50;
+
+  // Sync Hooks
+  const {
+    currentTime,
+    isHovering: isHoveringDetail,
+    handlers: detailHandlers
+  } = useVideoSync(player, scriptListRef, { secondsPerItem: 1, itemSize: ITEM_SIZE });
+
+  const {
+    currentTime: fastCurrentTime,
+    isHovering: isHoveringFast,
+    handlers: fastHandlers
+  } = useVideoSync(player, fastListRef, { secondsPerItem: 10, itemSize: ITEM_SIZE });
+
+  // Memoize Item Data to prevent unnecessary re-renders of list items (though we pass currentTime, so it updates)
+  const detailItemData = useMemo(() => ({ script, currentTime, player }), [script, currentTime, player]);
+  const fastItemData = useMemo(() => ({ script: fastScript, currentTime: fastCurrentTime, player }), [fastScript, fastCurrentTime, player]);
+
+  const videoOpts = useMemo(() => ({
     width: '100%',
     height: isMobile ? '300px' : '560px',
     playerVars: {
@@ -46,6 +131,11 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  useEffect(() => {
+    console.log("[Debug] Detailed Dim:", detailedDim);
+    console.log("[Debug] Fast Dim:", fastDim);
+  }, [detailedDim, fastDim]);
+
   const updateScript = (ytPlayer) => {
     const videoDuration = ytPlayer.getDuration();
     if (videoDuration > 0) {
@@ -55,21 +145,15 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
       for (let time = 0; time < videoDuration; time += interval) {
         newScript.push({ time, text: formatTime(time) });
       }
-      setScript(prev => {
-        if (prev.length === newScript.length) return prev;
-        return newScript;
-      });
+      setScript(prev => (prev.length === newScript.length ? prev : newScript));
 
-      // 2. Fast Timeline (10s) - Always shown
+      // 2. Fast Timeline (10s)
       const fastInterval = 10;
       const newFastScript = [];
       for (let time = 0; time < videoDuration; time += fastInterval) {
         newFastScript.push({ time, text: formatTime(time) });
       }
-      setFastScript(prev => {
-        if (prev.length === newFastScript.length) return prev;
-        return newFastScript;
-      });
+      setFastScript(prev => (prev.length === newFastScript.length ? prev : newFastScript));
     }
   };
 
@@ -88,21 +172,15 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
     if (isExtension) {
       const remote = new RemotePlayer();
       setPlayer(remote);
-
-      // Poll for duration updates
       const checkDuration = setInterval(() => {
-        if (remote.getDuration() > 0) {
-          updateScript(remote);
-        }
+        if (remote.getDuration() > 0) updateScript(remote);
       }, 1000);
-
       return () => clearInterval(checkDuration);
     }
   }, [isExtension]);
 
   return (
-    <div className="flex flex-col h-screen w-full overflow-hidden">
-      {/* If Extension: Hide Player */}
+    <div className="flex flex-col h-screen w-full overflow-hidden bg-black text-white">
       {!isExtension && (
         <div className="w-full top-0 shrink-0">
           <YouTube
@@ -116,50 +194,58 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
 
       {/* Timeline Container */}
       <div className="flex flex-row grow basis-0 min-h-0 mt-4 mx-4 max-w-full gap-4 overflow-hidden">
+
         {/* Fast Timeline (10s) */}
         {fastScript.length > 0 && (
           <div
-            ref={fastScriptRef}
-            className={`overflow-y-auto overflow-x-hidden w-1/4 p-4 bg-gray-950 transition-colors duration-200 ${isPointerInFastScript ? 'border-4 rounded-lg border-purple' : 'border-4 border-purple-ghost rounded-lg'}`}
-            {...fastHandlers}
+            className={`w-1/4 h-full bg-gray-950 transition-colors duration-200 flex flex-col items-stretch ${isHoveringFast ? 'border-4 rounded-lg border-purple-500' : 'border-4 border-purple-900 rounded-lg'}`}
+            onMouseEnter={fastHandlers.onMouseEnter}
+            onMouseLeave={fastHandlers.onMouseLeave}
           >
-            {fastScript.map((line, index) => {
-              const nextTime = fastScript[index + 1] ? fastScript[index + 1].time : Number.MAX_SAFE_INTEGER;
-              const isActive = fastCurrentTime >= line.time && fastCurrentTime < nextTime;
-              return (
-                <p
-                  key={index}
-                  data-time={line.time}
-                  className={`text-2xl text-center p-2 m-0 rounded ${isActive ? 'bg-purple-ghost' : 'bg-black'}`}
-                  style={{ border: '0px solid #222222' }}
+            {/* Header/Affordance */}
+            <div className="text-center text-xs text-purple-300 py-1 bg-purple-900/20 font-mono">FAST (10s)</div>
+            <div ref={fastContainerRef} className="flex-1 min-h-0 relative" style={{ height: '100%' }}>
+              {fastDim.height > 0 && (
+                <List
+                  ref={fastListRef}
+                  height={fastDim.height}
+                  width="100%"
+                  itemCount={fastScript.length}
+                  itemSize={ITEM_SIZE}
+                  itemData={fastItemData}
+                  onScroll={(props) => fastHandlers.onListScroll(props, fastDim.height)}
+                  className="scrollbar-hide"
                 >
-                  {line.text}
-                </p>
-              );
-            })}
+                  {FastRow}
+                </List>
+              )}
+            </div>
           </div>
         )}
 
         {/* Detailed Timeline (1s) */}
         <div
-          ref={scriptRef}
-          className={`overflow-y-auto overflow-x-hidden flex-1 p-4 bg-gray-950 transition-colors duration-200 ${isPointerInScript ? 'border-4 rounded-lg border-purple' : 'border-4 border-purple-ghost rounded-lg'}`}
-          {...handlers}
+          className={`flex-1 h-full bg-gray-950 transition-colors duration-200 flex flex-col items-stretch ${isHoveringDetail ? 'border-4 rounded-lg border-purple-500' : 'border-4 border-purple-900 rounded-lg'}`}
+          onMouseEnter={detailHandlers.onMouseEnter}
+          onMouseLeave={detailHandlers.onMouseLeave}
         >
-          {script.map((line, index) => {
-            const nextTime = script[index + 1] ? script[index + 1].time : Number.MAX_SAFE_INTEGER;
-            const isActive = currentTime >= line.time && currentTime < nextTime;
-            return (
-              <p
-                key={index}
-                data-time={line.time}
-                className={`text-2xl text-center p-2 m-0 rounded ${isActive ? 'bg-purple-ghost' : 'bg-black'}`}
-                style={{ border: '0px solid #222222' }}
+          <div className="text-center text-xs text-purple-300 py-1 bg-purple-900/20 font-mono">DETAILED (1s)</div>
+          <div ref={detailedContainerRef} className="flex-1 min-h-0 relative" style={{ height: '100%' }}>
+            {detailedDim.height > 0 && (
+              <List
+                ref={scriptListRef}
+                height={detailedDim.height}
+                width="100%"
+                itemCount={script.length}
+                itemSize={ITEM_SIZE}
+                itemData={detailItemData}
+                onScroll={(props) => detailHandlers.onListScroll(props, detailedDim.height)}
+                className="scrollbar-hide"
               >
-                {line.text}
-              </p>
-            );
-          })}
+                {DetailedRow}
+              </List>
+            )}
+          </div>
         </div>
       </div>
 
@@ -170,22 +256,20 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
             href={`https://zoetroview.vercel.app/#/${videoId}`}
             target="_blank"
             rel="noreferrer"
-            className="block w-full text-center p-2 text-white rounded bg-purple-ghost hover:bg-purple"
+            className="block w-full text-center p-2 text-white rounded bg-purple-700 hover:bg-purple-600 transition-colors"
           >
             Open ZoetroView Web
-          </a>
+          </a >
         ) : (
           <button
             onClick={onBackClick}
-            className="w-full p-2 text-white rounded"
-            style={{ zIndex: 10 }}
+            className="w-full p-2 text-white rounded bg-gray-800 hover:bg-gray-700 transition-colors"
           >
             Enter Another URL
           </button>
         )}
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
-
 export default YouTubeWithScript;
