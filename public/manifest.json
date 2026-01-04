@@ -8,9 +8,7 @@
   },
   "permissions": [
     "sidePanel",
-    "activeTab",
-    "scripting",
-    "storage"
+    "activeTab"
   ],
   "host_permissions": [
     "https://www.youtube.com/*"

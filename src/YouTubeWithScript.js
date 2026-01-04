@@ -8,7 +8,9 @@ import RemotePlayer from './utils/RemotePlayer';
 const YouTubeWithScript = ({ videoId, onBackClick }) => {
   const [player, setPlayer] = useState(null);
   const [script, setScript] = useState([]);
+  const [fastScript, setFastScript] = useState([]); // New State
   const scriptRef = useRef(null);
+  const fastScriptRef = useRef(null); // New Ref
 
   // Check if we are running as a Chrome Extension
   const isExtension = typeof chrome !== 'undefined' && !!chrome.runtime && !!chrome.tabs;
@@ -18,6 +20,13 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
     isPointerInScript,
     handlers
   } = useVideoSync(player, scriptRef);
+
+  // Second sync for Fast Timeline
+  const {
+    currentTime: fastCurrentTime,
+    isPointerInScript: isPointerInFastScript,
+    handlers: fastHandlers
+  } = useVideoSync(player, fastScriptRef);
 
   const isMobile = useIsMobile();
 
@@ -40,6 +49,7 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
   const updateScript = (ytPlayer) => {
     const videoDuration = ytPlayer.getDuration();
     if (videoDuration > 0) {
+      // 1. Detailed Timeline (1s)
       const interval = 1;
       const newScript = [];
       for (let time = 0; time < videoDuration; time += interval) {
@@ -48,6 +58,17 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
       setScript(prev => {
         if (prev.length === newScript.length) return prev;
         return newScript;
+      });
+
+      // 2. Fast Timeline (10s) - Always shown
+      const fastInterval = 10;
+      const newFastScript = [];
+      for (let time = 0; time < videoDuration; time += fastInterval) {
+        newFastScript.push({ time, text: formatTime(time) });
+      }
+      setFastScript(prev => {
+        if (prev.length === newFastScript.length) return prev;
+        return newFastScript;
       });
     }
   };
@@ -93,26 +114,53 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
         </div>
       )}
 
-      {/* Timeline */}
-      <div
-        ref={scriptRef}
-        className={`overflow-y-auto p-4 grow basis-0 min-h-0 mt-4 mx-4 max-w-full bg-gray-950 ${isPointerInScript ? 'border-4 rounded-lg border-purple' : 'border-4 border-purple-ghost rounded-lg'}`}
-        {...handlers}
-      >
-        {script.map((line, index) => {
-          const nextTime = script[index + 1] ? script[index + 1].time : Number.MAX_SAFE_INTEGER;
-          const isActive = currentTime >= line.time && currentTime < nextTime;
-          return (
-            <p
-              key={index}
-              data-time={line.time}
-              className={`text-2xl text-center p-2 m-0 rounded ${isActive ? 'bg-purple-ghost' : 'bg-black'}`}
-              style={{ border: '0px solid #222222' }}
-            >
-              {line.text}
-            </p>
-          );
-        })}
+      {/* Timeline Container */}
+      <div className="flex flex-row grow basis-0 min-h-0 mt-4 mx-4 max-w-full gap-4 overflow-hidden">
+        {/* Fast Timeline (10s) */}
+        {fastScript.length > 0 && (
+          <div
+            ref={fastScriptRef}
+            className={`overflow-y-auto overflow-x-hidden w-1/4 p-4 bg-gray-950 transition-colors duration-200 ${isPointerInFastScript ? 'border-4 rounded-lg border-purple' : 'border-4 border-purple-ghost rounded-lg'}`}
+            {...fastHandlers}
+          >
+            {fastScript.map((line, index) => {
+              const nextTime = fastScript[index + 1] ? fastScript[index + 1].time : Number.MAX_SAFE_INTEGER;
+              const isActive = fastCurrentTime >= line.time && fastCurrentTime < nextTime;
+              return (
+                <p
+                  key={index}
+                  data-time={line.time}
+                  className={`text-2xl text-center p-2 m-0 rounded ${isActive ? 'bg-purple-ghost' : 'bg-black'}`}
+                  style={{ border: '0px solid #222222' }}
+                >
+                  {line.text}
+                </p>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Detailed Timeline (1s) */}
+        <div
+          ref={scriptRef}
+          className={`overflow-y-auto overflow-x-hidden flex-1 p-4 bg-gray-950 transition-colors duration-200 ${isPointerInScript ? 'border-4 rounded-lg border-purple' : 'border-4 border-purple-ghost rounded-lg'}`}
+          {...handlers}
+        >
+          {script.map((line, index) => {
+            const nextTime = script[index + 1] ? script[index + 1].time : Number.MAX_SAFE_INTEGER;
+            const isActive = currentTime >= line.time && currentTime < nextTime;
+            return (
+              <p
+                key={index}
+                data-time={line.time}
+                className={`text-2xl text-center p-2 m-0 rounded ${isActive ? 'bg-purple-ghost' : 'bg-black'}`}
+                style={{ border: '0px solid #222222' }}
+              >
+                {line.text}
+              </p>
+            );
+          })}
+        </div>
       </div>
 
       {/* Bottom Button */}
