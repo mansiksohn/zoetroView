@@ -9,12 +9,19 @@ import { useContainerDimensions } from './hooks/useContainerDimensions';
 
 // Row Component for Detailed Timeline (1s)
 const DetailedRow = ({ index, style, data }) => {
-  const { script, currentTime, player } = data;
-  const line = script[index];
+  const { script, currentTime, player, paddingCount } = data;
+
+  // Checking for Padding Indices
+  if (index < paddingCount || index >= script.length + paddingCount) {
+    return <div style={style} />;
+  }
+
+  const realIndex = index - paddingCount;
+  const line = script[realIndex];
   if (!line) return null;
 
   const isCurrentSecond = Math.floor(currentTime) === line.time;
-  const isMajor = index % 10 === 0;
+  const isMajor = realIndex % 10 === 0;
 
   return (
     <div style={style} className="flex items-center justify-center">
@@ -40,12 +47,19 @@ const DetailedRow = ({ index, style, data }) => {
 
 // Row Component for Fast Timeline (10s)
 const FastRow = ({ index, style, data }) => {
-  const { script, currentTime, player } = data;
-  const line = script[index];
+  const { script, currentTime, player, paddingCount } = data;
+
+  // Checking for Padding Indices
+  if (index < paddingCount || index >= script.length + paddingCount) {
+    return <div style={style} />;
+  }
+
+  const realIndex = index - paddingCount;
+  const line = script[realIndex];
   if (!line) return null;
 
   const isActiveBlock = currentTime >= line.time && currentTime < (line.time + 10);
-  const isMajor = index % 6 === 0;
+  const isMajor = realIndex % 6 === 0;
 
   return (
     <div style={style} className="flex items-center justify-center">
@@ -84,20 +98,26 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
   const isMobile = useIsMobile();
   const ITEM_SIZE = 50;
 
+  // DUMMY ITEM STRATEGY
+  // 12 items * 50px = 600px padding.
+  // This ensures that Index 0 (Time 0) can be pushed to the center (~300px)
+  // and Index Max can be pulled to the center.
+  const PADDING_COUNT = 12;
+
   const {
     currentTime,
     isHovering: isHoveringDetail,
     handlers: detailHandlers
-  } = useVideoSync(player, scriptListRef, { secondsPerItem: 1, itemSize: ITEM_SIZE });
+  } = useVideoSync(player, scriptListRef, { secondsPerItem: 1, itemSize: ITEM_SIZE, paddingCount: PADDING_COUNT });
 
   const {
     currentTime: fastCurrentTime,
     isHovering: isHoveringFast,
     handlers: fastHandlers
-  } = useVideoSync(player, fastListRef, { secondsPerItem: 10, itemSize: ITEM_SIZE });
+  } = useVideoSync(player, fastListRef, { secondsPerItem: 10, itemSize: ITEM_SIZE, paddingCount: PADDING_COUNT });
 
-  const detailItemData = useMemo(() => ({ script, currentTime, player }), [script, currentTime, player]);
-  const fastItemData = useMemo(() => ({ script: fastScript, currentTime: fastCurrentTime, player }), [fastScript, fastCurrentTime, player]);
+  const detailItemData = useMemo(() => ({ script, currentTime, player, paddingCount: PADDING_COUNT }), [script, currentTime, player]);
+  const fastItemData = useMemo(() => ({ script: fastScript, currentTime: fastCurrentTime, player, paddingCount: PADDING_COUNT }), [fastScript, fastCurrentTime, player]);
 
   const videoOpts = useMemo(() => ({
     width: '100%',
@@ -107,11 +127,10 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
     },
   }), [isMobile]);
 
-  // Calculate Padding to allow first/last items to be exactly centered
-  const getPadding = (height) => (height > ITEM_SIZE ? (height - ITEM_SIZE) / 2 : 0);
-
-  const detailedPadding = getPadding(detailedDim.height);
-  const fastPadding = getPadding(fastDim.height);
+  // Removed old dynamic padding logic.
+  // const getPadding = ... (Unused)
+  // const detailedPadding = ... (Unused)
+  // const fastPadding = ... (Unused)
 
   const formatTime = (seconds) => {
     const h = Math.floor(seconds / 3600);
@@ -190,24 +209,12 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
                   ref={fastListRef}
                   height={fastDim.height}
                   width="100%"
-                  itemCount={fastScript.length}
+                  itemCount={fastScript.length + (PADDING_COUNT * 2)}
                   itemSize={ITEM_SIZE}
                   itemData={fastItemData}
                   onScroll={(props) => fastHandlers.onListScroll(props, fastDim.height)}
-                  innerElementType={forwardRef(({ style, ...rest }, ref) => (
-                    <div
-                      ref={ref}
-                      style={{
-                        ...style,
-                        height: `${parseFloat(style.height) + fastPadding * 2}px`,
-                      }}
-                      {...rest}
-                    />
-                  ))}
                 >
-                  {({ index, style, data }) => (
-                    <FastRow index={index} style={{ ...style, top: (parseFloat(style.top) + fastPadding) }} data={data} />
-                  )}
+                  {FastRow}
                 </List>
               )}
             </div>
@@ -227,24 +234,12 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
                 ref={scriptListRef}
                 height={detailedDim.height}
                 width="100%"
-                itemCount={script.length}
+                itemCount={script.length + (PADDING_COUNT * 2)}
                 itemSize={ITEM_SIZE}
                 itemData={detailItemData}
                 onScroll={(props) => detailHandlers.onListScroll(props, detailedDim.height)}
-                innerElementType={forwardRef(({ style, ...rest }, ref) => (
-                  <div
-                    ref={ref}
-                    style={{
-                      ...style,
-                      height: `${parseFloat(style.height) + detailedPadding * 2}px`,
-                    }}
-                    {...rest}
-                  />
-                ))}
               >
-                {({ index, style, data }) => (
-                  <DetailedRow index={index} style={{ ...style, top: (parseFloat(style.top) + detailedPadding) }} data={data} />
-                )}
+                {DetailedRow}
               </List>
             )}
           </div>
