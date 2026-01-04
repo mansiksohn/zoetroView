@@ -1,5 +1,5 @@
 /* global chrome */
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, forwardRef } from 'react';
 import YouTube from 'react-youtube';
 import { FixedSizeList as List } from 'react-window';
 import useIsMobile from './useIsMobile';
@@ -13,12 +13,7 @@ const DetailedRow = ({ index, style, data }) => {
   const line = script[index];
   if (!line) return null;
 
-  // Determine active state (approximate window around current time)
-  // Since 1 item = 1 second, we can directly compare index vs floor(currentTime)
-  // But let's use a small range for smoother highlight
   const isCurrentSecond = Math.floor(currentTime) === line.time;
-
-  // Show text every 10 seconds (0, 10, 20...)
   const isMajor = index % 10 === 0;
 
   return (
@@ -34,9 +29,8 @@ const DetailedRow = ({ index, style, data }) => {
         <div
           className="w-full h-full flex items-center justify-center cursor-pointer group"
           onClick={() => player && player.seekTo(line.time, true)}
-          title={line.text} // Tooltip for minor ticks
+          title={line.text}
         >
-          {/* Large ticks for better visibility with large fonts */}
           <div className={`w-2 h-2 rounded-full ${isCurrentSecond ? 'bg-purple-500 scale-150' : 'bg-gray-600 group-hover:bg-gray-400'}`} />
         </div>
       )}
@@ -50,19 +44,14 @@ const FastRow = ({ index, style, data }) => {
   const line = script[index];
   if (!line) return null;
 
-  // 1 item = 10 seconds.
-  // Current Time is in seconds.
-  // Active if currentTime is within this 10s block
   const isActiveBlock = currentTime >= line.time && currentTime < (line.time + 10);
-
-  // Show text every 60 seconds (index 0, 6, 12...)
   const isMajor = index % 6 === 0;
 
   return (
     <div style={style} className="flex items-center justify-center">
       {isMajor ? (
         <div
-          className={`w-full text-center transition-colors duration-200 cursor-pointer ${isActiveBlock ? 'text-blue-400 font-bold text-xl' : 'text-gray-500 text-lg hover:text-white'}`}
+          className={`w-full text-center transition-colors duration-200 cursor-pointer ${isActiveBlock ? 'text-purple-400 font-bold text-xl' : 'text-gray-500 text-lg hover:text-white'}`}
           onClick={() => player && player.seekTo(line.time, true)}
         >
           {line.text}
@@ -73,7 +62,7 @@ const FastRow = ({ index, style, data }) => {
           onClick={() => player && player.seekTo(line.time, true)}
           title={line.text}
         >
-          <div className={`w-4 h-2 rounded ${isActiveBlock ? 'bg-blue-600' : 'bg-gray-700 group-hover:bg-gray-500'}`} />
+          <div className={`w-4 h-2 rounded ${isActiveBlock ? 'bg-purple-600' : 'bg-gray-700 group-hover:bg-gray-500'}`} />
         </div>
       )}
     </div>
@@ -85,21 +74,16 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
   const [script, setScript] = useState([]);
   const [fastScript, setFastScript] = useState([]);
 
-  // Refs for FixedSizeList
   const scriptListRef = useRef(null);
   const fastListRef = useRef(null);
 
-  // Refs for Dimension Measuring
   const [detailedContainerRef, detailedDim] = useContainerDimensions();
   const [fastContainerRef, fastDim] = useContainerDimensions();
 
   const isExtension = typeof chrome !== 'undefined' && !!chrome.runtime && !!chrome.tabs;
   const isMobile = useIsMobile();
-
-  // Constants
   const ITEM_SIZE = 50;
 
-  // Sync Hooks
   const {
     currentTime,
     isHovering: isHoveringDetail,
@@ -112,7 +96,6 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
     handlers: fastHandlers
   } = useVideoSync(player, fastListRef, { secondsPerItem: 10, itemSize: ITEM_SIZE });
 
-  // Memoize Item Data to prevent unnecessary re-renders of list items (though we pass currentTime, so it updates)
   const detailItemData = useMemo(() => ({ script, currentTime, player }), [script, currentTime, player]);
   const fastItemData = useMemo(() => ({ script: fastScript, currentTime: fastCurrentTime, player }), [fastScript, fastCurrentTime, player]);
 
@@ -124,6 +107,12 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
     },
   }), [isMobile]);
 
+  // Calculate Padding to allow first/last items to be exactly centered
+  const getPadding = (height) => (height > ITEM_SIZE ? (height - ITEM_SIZE) / 2 : 0);
+
+  const detailedPadding = getPadding(detailedDim.height);
+  const fastPadding = getPadding(fastDim.height);
+
   const formatTime = (seconds) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -131,15 +120,9 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  useEffect(() => {
-    console.log("[Debug] Detailed Dim:", detailedDim);
-    console.log("[Debug] Fast Dim:", fastDim);
-  }, [detailedDim, fastDim]);
-
   const updateScript = (ytPlayer) => {
     const videoDuration = ytPlayer.getDuration();
     if (videoDuration > 0) {
-      // 1. Detailed Timeline (1s)
       const interval = 1;
       const newScript = [];
       for (let time = 0; time < videoDuration; time += interval) {
@@ -147,7 +130,6 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
       }
       setScript(prev => (prev.length === newScript.length ? prev : newScript));
 
-      // 2. Fast Timeline (10s)
       const fastInterval = 10;
       const newFastScript = [];
       for (let time = 0; time < videoDuration; time += fastInterval) {
@@ -167,7 +149,6 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
     updateScript(event.target);
   };
 
-  // Initialize Remote Player for Extension
   useEffect(() => {
     if (isExtension) {
       const remote = new RemotePlayer();
@@ -202,7 +183,6 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
             onMouseEnter={fastHandlers.onMouseEnter}
             onMouseLeave={fastHandlers.onMouseLeave}
           >
-            {/* Header/Affordance */}
             <div className="text-center text-xs text-purple-300 py-1 bg-purple-900/20 font-mono">FAST (10s)</div>
             <div ref={fastContainerRef} className="flex-1 min-h-0 relative" style={{ height: '100%' }}>
               {fastDim.height > 0 && (
@@ -214,9 +194,20 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
                   itemSize={ITEM_SIZE}
                   itemData={fastItemData}
                   onScroll={(props) => fastHandlers.onListScroll(props, fastDim.height)}
-                  className="scrollbar-hide"
+                  innerElementType={forwardRef(({ style, ...rest }, ref) => (
+                    <div
+                      ref={ref}
+                      style={{
+                        ...style,
+                        height: `${parseFloat(style.height) + fastPadding * 2}px`,
+                      }}
+                      {...rest}
+                    />
+                  ))}
                 >
-                  {FastRow}
+                  {({ index, style, data }) => (
+                    <FastRow index={index} style={{ ...style, top: (parseFloat(style.top) + fastPadding) }} data={data} />
+                  )}
                 </List>
               )}
             </div>
@@ -240,9 +231,20 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
                 itemSize={ITEM_SIZE}
                 itemData={detailItemData}
                 onScroll={(props) => detailHandlers.onListScroll(props, detailedDim.height)}
-                className="scrollbar-hide"
+                innerElementType={forwardRef(({ style, ...rest }, ref) => (
+                  <div
+                    ref={ref}
+                    style={{
+                      ...style,
+                      height: `${parseFloat(style.height) + detailedPadding * 2}px`,
+                    }}
+                    {...rest}
+                  />
+                ))}
               >
-                {DetailedRow}
+                {({ index, style, data }) => (
+                  <DetailedRow index={index} style={{ ...style, top: (parseFloat(style.top) + detailedPadding) }} data={data} />
+                )}
               </List>
             )}
           </div>
@@ -259,7 +261,7 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
             className="block w-full text-center p-2 text-white rounded bg-purple-700 hover:bg-purple-600 transition-colors"
           >
             Open ZoetroView Web
-          </a >
+          </a>
         ) : (
           <button
             onClick={onBackClick}
@@ -268,8 +270,8 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
             Enter Another URL
           </button>
         )}
-      </div >
-    </div >
+      </div>
+    </div>
   );
 };
 export default YouTubeWithScript;
