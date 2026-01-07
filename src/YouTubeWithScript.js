@@ -198,7 +198,7 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
         {/* Fast Timeline (10s) */}
         {fastScript.length > 0 && (
           <div
-            className={`w-1/4 h-full bg-gray-950 transition-colors duration-200 flex flex-col items-stretch ${isHoveringFast ? 'border-4 rounded-lg border-purple-500' : 'border-4 border-purple-900 rounded-lg'}`}
+            className={`w-1/3 h-full bg-gray-950 transition-colors duration-200 flex flex-col items-stretch ${isHoveringFast ? 'border-4 rounded-lg border-purple-500' : 'border-4 border-purple-900 rounded-lg'}`}
             onMouseEnter={fastHandlers.onMouseEnter}
             onMouseLeave={fastHandlers.onMouseLeave}
           >

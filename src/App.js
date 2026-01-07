@@ -3,7 +3,6 @@ import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { HashRouter as Router, Route, Routes, useNavigate, useParams, Link } from 'react-router-dom';
 import YouTubeWithScript from './YouTubeWithScript';
 import './App.css';
-import { Analytics } from '@vercel/analytics/react';
 
 // 유튜브 URL에서 videoId를 추출하는 함수
 const extractVideoId = (url) => {
@@ -177,7 +176,6 @@ const App = () => {
         <Route path="/" element={<Home />} />
         <Route path="/:videoId" element={<VideoPage />} />
       </Routes>
-      <Analytics />
     </Router>
   );
 };
