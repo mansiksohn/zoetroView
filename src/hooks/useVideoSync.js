@@ -94,6 +94,7 @@ const useVideoSync = (player, listRef, { secondsPerItem = 1, itemSize = 50, padd
             // Reset auto-scroll flag
             setTimeout(() => { isAutoScrolling.current = false; }, 100);
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [player, listRef, itemSize, secondsPerItem, isHovering, paddingCount]);
 
     const handlers = {
