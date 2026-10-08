@@ -1,5 +1,5 @@
 /* global chrome */
-import React, { useState, useRef, useEffect, useMemo, forwardRef } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import YouTube from 'react-youtube';
 import { FixedSizeList as List } from 'react-window';
 import useIsMobile from './useIsMobile';
@@ -177,6 +177,7 @@ const YouTubeWithScript = ({ videoId, onBackClick }) => {
       }, 1000);
       return () => clearInterval(checkDuration);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isExtension]);
 
   return (
